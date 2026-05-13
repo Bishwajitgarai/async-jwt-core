@@ -30,13 +30,17 @@ class Validator:
         max_age: Optional[int] = None,
         expected_sub: Optional[str] = None,
         rate_limit_rps: Optional[float] = None,
-        rate_limit_burst: Optional[float] = None
+        rate_limit_burst: Optional[float] = None,
+        required_scopes: Optional[List[str]] = None,
+        required_roles: Optional[List[str]] = None,
+        required_access_ids: Optional[List[str]] = None,
+        required_session_id: Optional[str] = None
     ):
-        self.algorithms = algorithms or os.getenv("JWT_ALGORITHMS", "RS256").split(",")
+        self.algorithms = algorithms or os.getenv("ASYNC_JWT_ALGORITHMS", "RS256").split(",")
         self.algorithms = [alg.strip() for alg in self.algorithms]
         
-        resolved_issuer = issuer or os.getenv("JWT_ISSUER")
-        resolved_audience = audience or os.getenv("JWT_AUDIENCE")
+        resolved_issuer = issuer or os.getenv("ASYNC_JWT_ISSUER")
+        resolved_audience = audience or os.getenv("ASYNC_JWT_AUDIENCE")
         
         self.claims_validator = ClaimsValidator(
             resolved_issuer, 
@@ -45,7 +49,11 @@ class Validator:
             custom_validators, 
             clock, 
             max_age, 
-            expected_sub
+            expected_sub,
+            required_scopes,
+            required_roles,
+            required_access_ids,
+            required_session_id
         )
         
         self.nonce_checker = nonce_checker
@@ -170,11 +178,7 @@ class Validator:
 
     @staticmethod
     def extract_token(request: Any) -> str:
-        """Extract JWT token from a request object or headers dict.
-        
-        Supports dicts or objects with a .headers attribute (FastAPI, Starlette, etc.).
-        Expects 'Bearer <token>' in Authorization header.
-        """
+        """Extract JWT token from a request object or headers dict."""
         headers = None
         if isinstance(request, dict):
             headers = request
@@ -184,7 +188,6 @@ class Validator:
         if not headers:
             raise ValidationError("Could not find headers in request object")
             
-        # Try to find authorization header (case-insensitive)
         auth_header = None
         for k, v in headers.items():
             if k.lower() == "authorization":

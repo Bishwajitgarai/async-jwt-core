@@ -14,86 +14,154 @@ A minimal, spec-first, framework-agnostic, async-only JWT validator with zero ne
 
 In the modern Python async ecosystem, validating JWTs using JSON Web Key Sets (JWKS) usually forces you into one of two bad situations:
 1.  **Framework Lock-in**: Libraries tied directly to FastAPI, Starlette, or Django.
-2.  **Opinionated I/O**: Libraries that insist on making network calls for you (often using specific HTTP clients) to fetch keys, making it hard to implement custom caching (like Redis) or use your own HTTP session.
+2.  **Opinionated I/O**: Libraries that insist on making network calls for you (often using specific HTTP clients) to fetch keys.
 
 **`async-jwt-core` solves this by doing exactly one thing perfectly: Pure Cryptographic Validation without I/O.**
 
 We provide the core validation logic. You bring the keys. This gives you absolute control over how keys are fetched, cached, and stored, while ensuring your event loop never blocks.
 
+---
+
+## 💡 Core Examples: Why You Should Use It
+
+### 1. The Direct Approach (FastAPI Dependency)
+Validate a token in **FastAPI** without letting the JWT library block your event loop with hidden network calls.
+
+```python
+from fastapi import FastAPI, Depends, HTTPException, Request
+from async_jwt_core import Validator, ValidationError
+
+app = FastAPI()
+validator = Validator(algorithms=["RS256"])
+
+@app.get("/protected")
+async def protected_route(request: Request):
+    try:
+        # Extract token from request headers
+        token = Validator.extract_token(request)
+        
+        # YOU fetch the keys (e.g., from Redis). No hidden I/O!
+        jwks = await my_custom_key_fetcher() 
+        
+        # Validate!
+        claims = await validator.validate(token, jwks)
+        return {"message": f"Welcome {claims.sub}!"}
+        
+    except ValidationError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+```
+
+### 2. The Middleware Approach (FastAPI)
+Just like you add `CORSMiddleware`, you can add our `FastAPIMiddleware` to protect all routes automatically!
+
+```python
+from fastapi import FastAPI
+from async_jwt_core import Validator
+from async_jwt_core.middleware import FastAPIMiddleware
+
+app = FastAPI()
+
+# 1. Initialize validator (Uses ASYNC_JWT_ISSUER from ENV)
+validator = Validator(algorithms=["RS256"])
+
+# 2. Add middleware just like CORSMiddleware!
+app.add_middleware(
+    FastAPIMiddleware,
+    validator=validator,
+    jwks={"keys": [...]} # Pass your JWKS here
+)
+
+@app.get("/protected")
+async def protected_route(request: Request):
+    # Claims are automatically attached to request.state!
+    claims = request.state.user_claims
+    return {"message": f"Hello {claims.sub}"}
+```
+
+---
+
+## 🏆 Feature Showcase: Why We Are the Best
+
+Here is a comparison of why `async-jwt-core` is the ultimate choice for modern Python web applications:
+
+| Feature / Capability | Standard PyJWT | Framework Libs | `async-jwt-core` |
+| :--- | :---: | :---: | :---: |
+| **Async Native** | ❌ (Sync only) | 🟡 (Sometimes) | ✅ |
+| **Zero I/O (Absolute Control)** | ✅ | ❌ (Often fetches keys) | ✅ |
+| **No Framework Lock-in** | ✅ | ❌ (FastAPI/Django only) | ✅ |
+| **Extensible Algorithms**| ❌ (Hard to add) | ❌ (Hard to add) | ✅ |
+| **In-built Middlewares**| ❌ | ❌ | ✅ (FastAPI, Flask, Django) |
+| **In-built Rate Limiting** | ❌ | ❌ | ✅ (Token Bucket) |
+| **JWE Decryption** | ❌ | ❌ | ✅ (RSA-OAEP + AES-GCM) |
+| **Token Creation (Signing)** | ✅ | ❌ | ✅ |
+| **Role & Scope Validation (RBAC)**| ❌ (Do it yourself)| ❌ (Do it yourself)| ✅ |
+| **Access IDs Validation** | ❌ (Do it yourself)| ❌ (Do it yourself)| ✅ |
+| **Session ID Validation** | ❌ (Do it yourself)| ❌ (Do it yourself)| ✅ |
+
+---
+
+## 🔬 How to Test Your Application
+
+Testing an application that uses `async-jwt-core` is easy. You can mock the `Validator` or create valid tokens for testing using `Encoder`.
+
+Here is an example using `pytest` and `httpx` to test a FastAPI endpoint:
+
+```python
+import pytest
+from httpx import AsyncClient
+from async_jwt_core import Encoder
+
+@pytest.mark.asyncio
+async def test_protected_route():
+    from my_app import app # Import your FastAPI app
+    
+    # 1. Create a valid token for testing
+    header = {"alg": "HS256", "kid": "test-key"}
+    payload = {"sub": "user123", "roles": ["admin"]}
+    secret = "my-test-secret"
+    
+    token = Encoder.create_token(header, payload, secret)
+    
+    # 2. Call your protected endpoint
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.get(
+            "/protected",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+    assert response.status_code == 200
+    assert response.json()["message"] == "Welcome user123!"
+```
+
+---
+
 ## ✨ Key Features
 
--   🔒 **Zero Network I/O** – Keys are fetched externally. The validator only does the heavy lifting (crypto and claim checks).
+-   🔒 **Zero Network I/O** – Keys are fetched externally.
 -   ⚡ **Async-Only API** – Designed from the ground up for `asyncio`.
--   🧩 **Framework Agnostic** – Works with FastAPI, Sanic, aiohttp, or even pure Python background workers.
--   🛠️ **Highly Modular & Extensible** – Want to add a custom algorithm? Just inherit from `Algorithm` and register it.
--   🎯 **Custom Claim Validation** – Pass your own validation functions to enforce business rules.
--   📦 **Ultra Lightweight** – Only depends on `cryptography` for secure signature verification.
+-   🧩 **Framework Agnostic** – Works with FastAPI, Sanic, aiohttp, Flask, or Django.
+-   🎯 **Custom Claim Validation** – Pass your own validation functions.
+-   📦 **Ultra Lightweight** – Only depends on `cryptography`.
 
 ## 🔐 Supported Algorithms
 
-We support a vast range of modern cryptographic algorithms out of the box (12 total):
-
-| Type | Algorithms |
-| :--- | :--- |
-| **HMAC** (Symmetric) | `HS256`, `HS384`, `HS512` |
-| **RSA** (Asymmetric) | `RS256`, `RS384`, `RS512` |
-| **RSA-PSS** (Asymmetric)| `PS256`, `PS384`, `PS512` |
-| **ECDSA** (Elliptic Curve)| `ES256`, `ES384`, `ES512` |
-
-## 🌟 Extra Features to Help You (30+ Features Total)
-
-### 1. Token Creation (Signing)
-We are no longer just a validator! You can now create and sign tokens easily.
-```python
-from async_jwt_core import Encoder
-
-header = {"alg": "HS256", "kid": "key-1"}
-payload = {"sub": "1234567890", "name": "John Doe"}
-secret = b"my-secret-key"
-
-token = Encoder.create_token(header, payload, secret)
-```
-
-### 2. Token Extraction from Requests
-Extract the JWT token directly from a request object (like FastAPI, Starlette, Flask, or Django Request).
-```python
-token = Validator.extract_token(request)
-```
-
-### 3. In-built Async Rate Limiter
-Protect your validation endpoint from brute-force attacks with an in-memory rate limiter.
-
-### 4. JSON Web Encryption (JWE) Support
-We support **JWE decryption** (RSA-OAEP with AES-GCM) to handle encrypted tokens.
-
-### 5. Nonce / Replay Detection
-Prevent replay attacks by checking the `jti` (JWT ID) claim via an async callback.
+We support a vast range of modern cryptographic algorithms out of the box (**13 total**):
+`HS256`, `HS384`, `HS512`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`, `ES256`, `ES384`, `ES512`, `EdDSA`.
 
 ## 📖 Examples (References for Users)
 
-We provide full working examples in the `examples/` directory:
+We provide full working examples in the GitHub repository:
 
--   📄 **[Basic Usage](examples/basic_usage.py)**: Shows how to create and validate a token.
--   🚀 **[FastAPI Demo](examples/fastapi_demo.py)**: Shows how to integrate with FastAPI.
--   🌶️ **[Flask Demo](examples/flask_demo.py)**: Shows how to use it in Flask 2.0+ async routes.
--   🎸 **[Django Demo](examples/django_demo.py)**: Shows how to use it in Django 3.1+ async views.
+-   📄 **[Basic Usage](https://github.com/Bishwajitgarai/async-jwt-core/blob/main/examples/basic_usage.py)**: Shows how to create and validate a token.
+-   🚀 **[FastAPI Demo](https://github.com/Bishwajitgarai/async-jwt-core/blob/main/examples/fastapi_demo.py)**: Shows how to integrate with FastAPI.
+-   🌶️ **[Flask Demo](https://github.com/Bishwajitgarai/async-jwt-core/blob/main/examples/flask_demo.py)**: Shows how to use it in Flask.
+-   🎸 **[Django Demo](https://github.com/Bishwajitgarai/async-jwt-core/blob/main/examples/django_demo.py)**: Shows how to use it in Django.
 
 ## 🛠️ Installation
 
 ```bash
 uv add async-jwt-core
-# or
-pip install async-jwt-core
 ```
-
-## ⚖️ Why We Are Better
-
-| Feature | Standard PyJWT | Framework Libs | `async-jwt-core` |
-| :--- | :---: | :---: | :---: |
-| **Async Native** | ❌ (Sync only) | 🟡 (Sometimes) | ✅ |
-| **Zero I/O** | ✅ | ❌ (Often fetches keys) | ✅ |
-| **No Lock-in** | ✅ | ❌ (FastAPI/Django only) | ✅ |
-| **Extensible Algs**| ❌ (Hard to add) | ❌ (Hard to add) | ✅ |
 
 ## 📄 License
 
