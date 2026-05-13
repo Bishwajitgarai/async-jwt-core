@@ -6,24 +6,28 @@ from .base import Algorithm
 from ..core.decoder import base64url_decode
 from ..exceptions import InvalidSignatureError, ValidationError
 
-class HS256(Algorithm):
-    """HS256 (HMAC with SHA-256) implementation."""
+class HMACAlgorithm(Algorithm):
+    """Generic HMAC implementation supporting SHA-256, SHA-384, and SHA-512."""
     
+    def __init__(self, name: str, hash_alg):
+        self._name = name
+        self.hash_alg = hash_alg
+
     @property
     def name(self) -> str:
-        return "HS256"
+        return self._name
 
     def verify(self, message: bytes, signature: bytes, jwk: Dict[str, Any]) -> bool:
         try:
             k_b64 = jwk.get("k")
             if not k_b64:
-                raise ValidationError("JWK missing 'k' for HMAC")
+                raise ValidationError(f"JWK missing 'k' for {self._name}")
 
             # Decode secret from base64url
             secret = base64url_decode(k_b64)
             
             # Calculate expected signature
-            h = hmac.new(secret, message, hashlib.sha256)
+            h = hmac.new(secret, message, self.hash_alg)
             expected_signature = h.digest()
             
             # Constant time comparison
@@ -35,3 +39,8 @@ class HS256(Algorithm):
             raise
         except Exception as e:
             raise InvalidSignatureError(f"Signature verification failed: {e}") from e
+
+# Instantiate specific algorithms
+HS256 = HMACAlgorithm("HS256", hashlib.sha256)
+HS384 = HMACAlgorithm("HS384", hashlib.sha384)
+HS512 = HMACAlgorithm("HS512", hashlib.sha512)

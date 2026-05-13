@@ -37,15 +37,8 @@ class Validator:
             header_b64, payload_b64, signature_b64 = parts
 
             # 1. Decode header and payload
-            try:
-                header = decode_json(base64url_decode(header_b64))
-            except Exception as e:
-                raise ValidationError(f"Failed to decode header: {e}") from e
-
-            try:
-                payload = decode_json(base64url_decode(payload_b64))
-            except Exception as e:
-                raise ValidationError(f"Failed to decode payload: {e}") from e
+            header = await self.get_unverified_header(token)
+            payload = await self.decode_unverified(token)
 
             # 2. Check algorithm
             alg_name = header.get("alg")
@@ -90,6 +83,31 @@ class Validator:
         except Exception as e:
             logger.error(f"Unexpected error during validation: {e}")
             raise ValidationError(f"Unexpected error during validation: {e}") from e
+
+    async def decode_unverified(self, token: str) -> Dict[str, Any]:
+        """Decode the payload without verification.
+        
+        This is a helper feature for users to inspect claims before validation.
+        """
+        try:
+            parts = token.split(".")
+            if len(parts) != 3:
+                raise ValidationError("Invalid token format")
+            payload_b64 = parts[1]
+            return decode_json(base64url_decode(payload_b64))
+        except Exception as e:
+            raise ValidationError(f"Failed to decode unverified payload: {e}") from e
+
+    async def get_unverified_header(self, token: str) -> Dict[str, Any]:
+        """Decode the header without verification."""
+        try:
+            parts = token.split(".")
+            if len(parts) != 3:
+                raise ValidationError("Invalid token format")
+            header_b64 = parts[0]
+            return decode_json(base64url_decode(header_b64))
+        except Exception as e:
+            raise ValidationError(f"Failed to decode unverified header: {e}") from e
 
     def _find_key(self, jwks: Dict[str, Any], kid: str) -> Optional[Dict[str, Any]]:
         """Find the key with the given kid in the JWKS."""

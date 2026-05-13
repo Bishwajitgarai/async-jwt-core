@@ -29,6 +29,51 @@ We provide the core validation logic. You bring the keys. This gives you absolut
 -   🎯 **Custom Claim Validation** – Pass your own validation functions to enforce business rules during the validation phase.
 -   📦 **Ultra Lightweight** – Only depends on `cryptography` for secure signature verification.
 
+## 🔐 Supported Algorithms
+
+We support a vast range of modern cryptographic algorithms out of the box:
+
+| Type | Algorithms |
+| :--- | :--- |
+| **HMAC** (Symmetric) | `HS256`, `HS384`, `HS512` |
+| **RSA** (Asymmetric) | `RS256`, `RS384`, `RS512` |
+| **RSA-PSS** (Asymmetric)| `PS256`, `PS384`, `PS512` |
+| **ECDSA** (Elliptic Curve)| `ES256`, `ES384`, `ES512` |
+
+## 🌟 Extra Features to Help You
+
+To make your life easier, we include features that other libraries charge you in complexity:
+
+### 1. JSON Web Encryption (JWE) Support
+We don't just do signing. We now support **JWE decryption** (RSA-OAEP with AES-GCM). This allows you to handle encrypted tokens where the payload is hidden.
+```python
+from async_jwt_core import JWE
+
+# Decrypt an encrypted token
+decrypted_payload = await JWE.decrypt(token, private_key)
+```
+
+### 2. Unverified Decoding
+Need to check the claims or header before you validate the token? No problem.
+```python
+header = await validator.get_unverified_header(token)
+payload = await validator.decode_unverified(token)
+```
+
+### 3. Built-in Async JWKS Cache
+Even though we don't do I/O, we provide a simple async in-memory cache with TTL so you don't have to write your own.
+```python
+from async_jwt_core import JWKSCache
+
+cache = JWKSCache(ttl=3600)
+
+# In your request handler:
+jwks = await cache.get()
+if not jwks:
+    jwks = await fetch_jwks_from_web()
+    await cache.set(jwks)
+```
+
 ## 🛠️ Installation
 
 ```bash
@@ -39,9 +84,7 @@ pip install async-jwt-core
 
 ## 📖 Usage Examples
 
-### 1. The Standard Use Case (With External Fetching)
-
-Here is how you use it in an async environment where you control the I/O:
+### The Standard Use Case (With External Fetching)
 
 ```python
 import asyncio
@@ -50,23 +93,20 @@ from async_jwt_core import Validator, ValidationError
 
 # Initialize once
 validator = Validator(
-    algorithms=["RS256"],
-    issuer="https://auth.example.com",
-    audience="api.example.com"
+    algorithms=["RS256", "ES256"],
+    issuer="https://YOUR-AUTH-DOMAIN.com",
+    audience="YOUR-API-AUDIENCE"
 )
 
 async def fetch_jwks(url: str) -> dict:
-    """Developer controls all network calls and caching."""
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
             return await resp.json()
 
 async def authenticate(token: str):
-    # Fetch keys (ideally you'd cache this in Redis or memory)
-    jwks = await fetch_jwks("https://auth.example.com/.well-known/jwks.json")
+    jwks = await fetch_jwks("https://YOUR-AUTH-DOMAIN.com/.well-known/jwks.json")
     
     try:
-        # Pure async validation
         claims = await validator.validate(token, jwks)
         print(f"Authenticated user: {claims.sub}")
         return claims
@@ -75,32 +115,18 @@ async def authenticate(token: str):
         return None
 ```
 
-### 2. Advanced: Custom Claim Validation
-
-Ensure your users have the right roles right during the validation step:
-
-```python
-def validate_is_admin(payload: dict) -> bool:
-    return "admin" in payload.get("roles", [])
-
-validator = Validator(
-    algorithms=["RS256"],
-    custom_validators={"is_admin": validate_is_admin}
-)
-```
-
 ## ⚖️ Why We Are Better
 
 | Feature | Standard PyJWT | Framework Libs | `async-jwt-core` |
 | :--- | :---: | :---: | :---: |
-| **Async Native** | ❌ (Sync only) |  (Sometimes) |  |
-| **Zero I/O** |  | ❌ (Often fetches keys) |  |
-| **No Lock-in** |  | ❌ (FastAPI/Django only) |  |
-| **Extensible Algs**| ❌ (Hard to add) | ❌ (Hard to add) |  |
+| **Async Native** | ❌ (Sync only) | 🟡 (Sometimes) | ✅ |
+| **Zero I/O** | ✅ | ❌ (Often fetches keys) | ✅ |
+| **No Lock-in** | ✅ | ❌ (FastAPI/Django only) | ✅ |
+| **Extensible Algs**| ❌ (Hard to add) | ❌ (Hard to add) | ✅ |
 
 ## 🤝 Contributing
 
-We built this for the community! If you want to add support for more algorithms (like EdDSA or ES256) or improve the claims system, check out our modular folder structure in `src/async_jwt_core/algorithms/`. It is designed to be easy to extend.
+We built this for the community! If you want to add support for more algorithms (like EdDSA) or improve the claims system, check out our modular folder structure in `src/async_jwt_core/algorithms/`. It is designed to be easy to extend.
 
 ## 📄 License
 

@@ -58,8 +58,8 @@ async def run_rsa_demo():
     payload = {
         "sub": "1234567890",
         "name": "John Doe",
-        "iss": "https://auth.example.com",
-        "aud": "api.example.com",
+        "iss": "https://YOUR-AUTH-DOMAIN.com",
+        "aud": "YOUR-API-AUDIENCE",
         "exp": now + 3600,
         "iat": now,
         "role": "admin"  # For custom validation
@@ -87,8 +87,8 @@ async def run_rsa_demo():
     # 5. Validate
     validator = Validator(
         algorithms=["RS256"],
-        issuer="https://auth.example.com",
-        audience="api.example.com",
+        issuer="https://YOUR-AUTH-DOMAIN.com",
+        audience="YOUR-API-AUDIENCE",
         custom_validators={"is_admin": validate_is_admin}
     )
     
@@ -126,7 +126,7 @@ async def run_hmac_demo():
     payload = {
         "sub": "0987654321",
         "name": "Jane Doe",
-        "iss": "https://auth.example.com",
+        "iss": "https://YOUR-AUTH-DOMAIN.com",
         "exp": now + 3600
     }
     
@@ -146,7 +146,7 @@ async def run_hmac_demo():
     # 3. Validate
     validator = Validator(
         algorithms=["HS256"],
-        issuer="https://auth.example.com"
+        issuer="https://YOUR-AUTH-DOMAIN.com"
     )
     
     try:
