@@ -1,9 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "async-jwt-core"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"  # We bumped version in __init__.py, let's match it here
+description = "A minimal, spec-first, framework-agnostic, async-only JWT validator with zero network dependencies."
 readme = "README.md"
 requires-python = ">=3.11"
+authors = [
+    {name = "Bishwajit Garai"}
+]
+license = {text = "MIT"}
 dependencies = [
     "cryptography>=48.0.0",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/async_jwt_core"]

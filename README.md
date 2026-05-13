@@ -5,6 +5,9 @@ A minimal, spec-first, framework-agnostic, async-only JWT validator with zero ne
 [![PyPI version](https://img.shields.io/pypi/v/async-jwt-core.svg)](https://pypi.org/project/async-jwt-core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+- **PyPI**: https://pypi.org/project/async-jwt-core/
+- **GitHub**: https://github.com/Bishwajitgarai/async-jwt-core
+
 ---
 
 ## 🚀 Why `async-jwt-core`? (The Problem We Solve)
