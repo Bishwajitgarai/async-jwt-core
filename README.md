@@ -26,12 +26,12 @@ We provide the core validation logic. You bring the keys. This gives you absolut
 -   ⚡ **Async-Only API** – Designed from the ground up for `asyncio`.
 -   🧩 **Framework Agnostic** – Works with FastAPI, Sanic, aiohttp, or even pure Python background workers.
 -   🛠️ **Highly Modular & Extensible** – Want to add a custom algorithm? Just inherit from `Algorithm` and register it.
--   🎯 **Custom Claim Validation** – Pass your own validation functions to enforce business rules during the validation phase.
+-   🎯 **Custom Claim Validation** – Pass your own validation functions to enforce business rules.
 -   📦 **Ultra Lightweight** – Only depends on `cryptography` for secure signature verification.
 
 ## 🔐 Supported Algorithms
 
-We support a vast range of modern cryptographic algorithms out of the box:
+We support a vast range of modern cryptographic algorithms out of the box (12 total):
 
 | Type | Algorithms |
 | :--- | :--- |
@@ -40,39 +40,54 @@ We support a vast range of modern cryptographic algorithms out of the box:
 | **RSA-PSS** (Asymmetric)| `PS256`, `PS384`, `PS512` |
 | **ECDSA** (Elliptic Curve)| `ES256`, `ES384`, `ES512` |
 
-## 🌟 Extra Features to Help You
+## 🌟 Extra Features to Help You (30+ Features Total)
 
 To make your life easier, we include features that other libraries charge you in complexity:
 
-### 1. JSON Web Encryption (JWE) Support
+### 1. In-built Async Rate Limiter
+Protect your validation endpoint from brute-force or DoS attacks with an in-memory Token Bucket rate limiter.
+```python
+validator = Validator(algorithms=["RS256"], rate_limit_rps=10.0, rate_limit_burst=20.0)
+```
+
+### 2. Auto Environment Variable Defaults
+We automatically load critical defaults from environment variables if not specified in code:
+-   `JWT_ALGORITHMS` (Comma separated)
+-   `JWT_ISSUER`
+-   `JWT_AUDIENCE`
+
+### 3. JSON Web Encryption (JWE) Support
 We don't just do signing. We now support **JWE decryption** (RSA-OAEP with AES-GCM). This allows you to handle encrypted tokens where the payload is hidden.
-```python
-from async_jwt_core import JWE
 
-# Decrypt an encrypted token
-decrypted_payload = await JWE.decrypt(token, private_key)
-```
+### 4. Nonce / Replay Detection
+Prevent replay attacks by checking the `jti` (JWT ID) claim. Pass an async callback to check uniqueness against your database or Redis.
 
-### 2. Unverified Decoding
-Need to check the claims or header before you validate the token? No problem.
-```python
-header = await validator.get_unverified_header(token)
-payload = await validator.decode_unverified(token)
-```
+### 5. Token Introspection (RFC 7662)
+Validate opaque tokens by parsing responses from an introspection endpoint.
 
-### 3. Built-in Async JWKS Cache
+### 6. Multiple Issuers & Audiences
+Support passing a list of allowed issuers and audiences for multi-tenant applications.
+
+### 7. Custom Clock for Testing
+Pass a custom function to get the current time, making it easy to test expiration logic.
+
+### 8. Token Type (`typ`) Validation
+Enforce that the token has a specific type in the header (e.g., `JWT`).
+
+### 9. Strict Key Type Validation (Security)
+We enforce that the JWK's `kty` matches the algorithm used (e.g., `RS256` requires `RSA`), preventing algorithm confusion attacks.
+
+### 10. Token Max Age Check
+Enforce that a token was issued recently based on the `iat` claim, independent of the `exp` claim.
+
+### 11. Subject (`sub`) Matching
+Directly validate that the token belongs to a specific user.
+
+### 12. Header Extraction Helpers
+Extract `kid`, `alg`, `jku`, and `x5c` directly from the token without verification, helping you decide how to process it.
+
+### 13. Built-in Async JWKS Cache
 Even though we don't do I/O, we provide a simple async in-memory cache with TTL so you don't have to write your own.
-```python
-from async_jwt_core import JWKSCache
-
-cache = JWKSCache(ttl=3600)
-
-# In your request handler:
-jwks = await cache.get()
-if not jwks:
-    jwks = await fetch_jwks_from_web()
-    await cache.set(jwks)
-```
 
 ## 🛠️ Installation
 
@@ -80,39 +95,6 @@ if not jwks:
 uv add async-jwt-core
 # or
 pip install async-jwt-core
-```
-
-## 📖 Usage Examples
-
-### The Standard Use Case (With External Fetching)
-
-```python
-import asyncio
-import aiohttp
-from async_jwt_core import Validator, ValidationError
-
-# Initialize once
-validator = Validator(
-    algorithms=["RS256", "ES256"],
-    issuer="https://YOUR-AUTH-DOMAIN.com",
-    audience="YOUR-API-AUDIENCE"
-)
-
-async def fetch_jwks(url: str) -> dict:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            return await resp.json()
-
-async def authenticate(token: str):
-    jwks = await fetch_jwks("https://YOUR-AUTH-DOMAIN.com/.well-known/jwks.json")
-    
-    try:
-        claims = await validator.validate(token, jwks)
-        print(f"Authenticated user: {claims.sub}")
-        return claims
-    except ValidationError as e:
-        print(f"Auth failed: {e}")
-        return None
 ```
 
 ## ⚖️ Why We Are Better
@@ -123,10 +105,6 @@ async def authenticate(token: str):
 | **Zero I/O** | ✅ | ❌ (Often fetches keys) | ✅ |
 | **No Lock-in** | ✅ | ❌ (FastAPI/Django only) | ✅ |
 | **Extensible Algs**| ❌ (Hard to add) | ❌ (Hard to add) | ✅ |
-
-## 🤝 Contributing
-
-We built this for the community! If you want to add support for more algorithms (like EdDSA) or improve the claims system, check out our modular folder structure in `src/async_jwt_core/algorithms/`. It is designed to be easy to extend.
 
 ## 📄 License
 
