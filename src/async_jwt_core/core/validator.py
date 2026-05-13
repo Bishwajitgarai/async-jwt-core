@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Callable
 
 from ..algorithms import get_algorithm
 from ..claims import ClaimsValidator, JWTClaims
@@ -21,9 +21,10 @@ class Validator:
         issuer: Optional[str] = None,
         audience: Optional[str] = None,
         leeway: int = 0,
+        custom_validators: Optional[Dict[str, Callable[[Dict[str, Any]], bool]]] = None
     ):
         self.algorithms = algorithms
-        self.claims_validator = ClaimsValidator(issuer, audience, leeway)
+        self.claims_validator = ClaimsValidator(issuer, audience, leeway, custom_validators)
 
     async def validate(self, token: str, jwks: Dict[str, Any]) -> JWTClaims:
         """Validate a JWT token against a JWKS."""

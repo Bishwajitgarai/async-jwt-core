@@ -1,9 +1,11 @@
 from .base import Algorithm
 from .rsa import RS256
+from .hmac import HS256
 from ..exceptions import ValidationError
 
 _ALGORITHMS = {
     "RS256": RS256(),
+    "HS256": HS256(),
 }
 
 def get_algorithm(name: str) -> Algorithm:

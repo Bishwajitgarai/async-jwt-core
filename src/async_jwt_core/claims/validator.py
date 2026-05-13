@@ -1,22 +1,24 @@
 import time
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Callable
 from ..exceptions import ExpiredTokenError, InvalidIssuerError, InvalidAudienceError, ValidationError
 
 class ClaimsValidator:
-    """Validator for standard JWT claims."""
+    """Validator for standard and custom JWT claims."""
     
     def __init__(
         self,
         issuer: Optional[str] = None,
         audience: Optional[str] = None,
         leeway: int = 0,
+        custom_validators: Optional[Dict[str, Callable[[Dict[str, Any]], bool]]] = None
     ):
         self.issuer = issuer
         self.audience = audience
         self.leeway = leeway
+        self.custom_validators = custom_validators or {}
 
     def validate(self, payload: Dict[str, Any]):
-        """Verify standard claims."""
+        """Verify standard and custom claims."""
         now = time.time()
 
         # 1. Expired
@@ -45,3 +47,13 @@ class ClaimsValidator:
                     raise InvalidAudienceError(f"Invalid audience: {self.audience} not in {audience_claim}")
             elif audience_claim != self.audience:
                 raise InvalidAudienceError(f"Invalid audience: expected {self.audience}, got {audience_claim}")
+
+        # 5. Custom Validators
+        for claim_name, validator_func in self.custom_validators.items():
+            try:
+                if not validator_func(payload):
+                    raise ValidationError(f"Custom validation failed for claim: {claim_name}")
+            except ValidationError:
+                raise
+            except Exception as e:
+                raise ValidationError(f"Custom validator error for claim '{claim_name}': {e}") from e
