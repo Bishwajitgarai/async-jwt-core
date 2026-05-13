@@ -2,6 +2,7 @@ from .core.validator import Validator
 from .claims.model import JWTClaims
 from .core.cache import JWKSCache
 from .core.jwe import JWE
+from .core.encoder import Encoder
 from .exceptions import (
     ValidationError,
     ExpiredTokenError,
@@ -17,6 +18,7 @@ __all__ = [
     "JWTClaims",
     "JWKSCache",
     "JWE",
+    "Encoder",
     "ValidationError",
     "ExpiredTokenError",
     "InvalidSignatureError",

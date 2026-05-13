@@ -42,19 +42,26 @@ We support a vast range of modern cryptographic algorithms out of the box (12 to
 
 ## 🌟 Extra Features to Help You (30+ Features Total)
 
-To make your life easier, we include features that other libraries charge you in complexity:
+### 1. Token Creation (Signing)
+We are no longer just a validator! You can now create and sign tokens easily.
+```python
+from async_jwt_core import Encoder
 
-### 1. Token Extraction from Requests
-Extract the JWT token directly from a request object (like FastAPI, Starlette, Flask, or Django Request) or a dictionary of headers.
+header = {"alg": "HS256", "kid": "key-1"}
+payload = {"sub": "1234567890", "name": "John Doe"}
+secret = b"my-secret-key"
+
+token = Encoder.create_token(header, payload, secret)
+```
+
+### 2. Token Extraction from Requests
+Extract the JWT token directly from a request object (like FastAPI, Starlette, Flask, or Django Request).
 ```python
 token = Validator.extract_token(request)
 ```
 
-### 2. In-built Async Rate Limiter
-Protect your validation endpoint from brute-force or DoS attacks with an in-memory Token Bucket rate limiter.
-
-### 3. Auto Environment Variable Defaults
-We automatically load critical defaults from environment variables if not specified in code (e.g., `JWT_ALGORITHMS`, `JWT_ISSUER`).
+### 3. In-built Async Rate Limiter
+Protect your validation endpoint from brute-force attacks with an in-memory rate limiter.
 
 ### 4. JSON Web Encryption (JWE) Support
 We support **JWE decryption** (RSA-OAEP with AES-GCM) to handle encrypted tokens.
@@ -64,14 +71,12 @@ Prevent replay attacks by checking the `jti` (JWT ID) claim via an async callbac
 
 ## 📖 Examples (References for Users)
 
-We provide full working examples in the `examples/` directory of the repository:
+We provide full working examples in the `examples/` directory:
 
--   📄 **[Basic Usage](examples/basic_usage.py)**: Shows how to generate keys, create a token, and validate it using RSA.
--   🚀 **[FastAPI Demo](examples/fastapi_demo.py)**: Shows how to integrate with FastAPI using the `extract_token` helper.
+-   📄 **[Basic Usage](examples/basic_usage.py)**: Shows how to create and validate a token.
+-   🚀 **[FastAPI Demo](examples/fastapi_demo.py)**: Shows how to integrate with FastAPI.
 -   🌶️ **[Flask Demo](examples/flask_demo.py)**: Shows how to use it in Flask 2.0+ async routes.
 -   🎸 **[Django Demo](examples/django_demo.py)**: Shows how to use it in Django 3.1+ async views.
-
-Check the folder for more references on how to use the library in real-world scenarios.
 
 ## 🛠️ Installation
 

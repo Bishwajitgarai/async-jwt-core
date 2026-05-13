@@ -57,6 +57,25 @@ class RSAAlgorithm(Algorithm):
         except Exception as e:
             raise InvalidSignatureError(f"Signature verification failed: {e}") from e
 
+    def sign(self, message: bytes, key: Any) -> bytes:
+        """Sign the message using the provided RSA private key."""
+        if not hasattr(key, "sign"):
+            raise ValidationError("Key must be an RSAPrivateKey object")
+            
+        if self.use_pss:
+            pad = padding.PSS(
+                mgf=padding.MGF1(self.hash_alg),
+                salt_length=padding.PSS.MAX_LENGTH
+            )
+        else:
+            pad = padding.PKCS1v15()
+            
+        return key.sign(
+            message,
+            pad,
+            self.hash_alg
+        )
+
 # Instantiate specific algorithms
 RS256 = RSAAlgorithm("RS256", hashes.SHA256())
 RS384 = RSAAlgorithm("RS384", hashes.SHA384())

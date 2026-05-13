@@ -1,47 +1,17 @@
 import asyncio
-import base64
-import json
 import time
-import hmac
-import hashlib
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import hashes
+from async_jwt_core import Validator, Encoder, ValidationError
 
-from async_jwt_core import Validator, ValidationError
-
-def base64url_encode(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")
-
-async def run_rsa_demo():
-    print("--- Running RSA (RS256) Demo ---")
+async def run_demo():
+    print("--- Running async-jwt-core Demo ---")
     
-    # 1. Generate a test RSA key pair
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048
-    )
-    public_key = private_key.public_key()
+    # 1. Create a token (HMAC)
+    print("Creating token...")
+    secret = b"super-secret-key-that-is-at-least-32-bytes-long!!"
     
-    # 2. Create a JWK from the public key
-    public_numbers = public_key.public_numbers()
-    n_bytes = public_numbers.n.to_bytes((public_numbers.n.bit_length() + 7) // 8, byteorder="big")
-    e_bytes = public_numbers.e.to_bytes((public_numbers.e.bit_length() + 7) // 8, byteorder="big")
-    
-    jwk = {
-        "kty": "RSA",
-        "kid": "test-rsa-key",
-        "alg": "RS256",
-        "use": "sig",
-        "n": base64url_encode(n_bytes),
-        "e": base64url_encode(e_bytes),
-    }
-    
-    jwks = {"keys": [jwk]}
-
-    # 3. Create a JWT
     header = {
-        "alg": "RS256",
-        "kid": "test-rsa-key"
+        "alg": "HS256",
+        "kid": "test-hmac-key"
     }
     
     now = int(time.time())
@@ -51,32 +21,35 @@ async def run_rsa_demo():
         "iss": "https://your-auth-domain.com",
         "aud": "your-api-audience",
         "exp": now + 3600,
-        "iat": now,
-        "role": "admin"
+        "iat": now
     }
     
-    header_b64 = base64url_encode(json.dumps(header).encode("utf-8"))
-    payload_b64 = base64url_encode(json.dumps(payload).encode("utf-8"))
-    
-    message = f"{header_b64}.{payload_b64}".encode("utf-8")
-    
-    signature = private_key.sign(
-        message,
-        padding.PKCS1v15(),
-        hashes.SHA256()
-    )
-    
-    signature_b64 = base64url_encode(signature)
-    token = f"{header_b64}.{payload_b64}.{signature_b64}"
-    print("Token generated.")
+    # Use our Encoder!
+    token = Encoder.create_token(header, payload, secret)
+    print(f"Token created: {token[:20]}...")
 
-    # 4. Validate
+    # 2. Setup Validator
     validator = Validator(
-        algorithms=["RS256"],
+        algorithms=["HS256"],
         issuer="https://your-auth-domain.com",
         audience="your-api-audience"
     )
     
+    # JWKS containing the secret
+    import base64
+    k_b64 = base64.urlsafe_b64encode(secret).decode("utf-8").rstrip("=")
+    jwks = {
+        "keys": [
+            {
+                "kty": "oct",
+                "kid": "test-hmac-key",
+                "alg": "HS256",
+                "k": k_b64
+            }
+        ]
+    }
+
+    # 3. Validate
     try:
         claims = await validator.validate(token, jwks)
         print("Validation SUCCESS!")
@@ -84,8 +57,5 @@ async def run_rsa_demo():
     except ValidationError as e:
         print(f"Validation FAILED: {e}")
 
-async def main():
-    await run_rsa_demo()
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(run_demo())

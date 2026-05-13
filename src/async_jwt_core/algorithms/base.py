@@ -17,3 +17,10 @@ class Algorithm(ABC):
         Should raise InvalidSignatureError if verification fails.
         """
         pass
+
+    def sign(self, message: bytes, key: Any) -> bytes:
+        """Sign the message using the provided key (private key or secret).
+        
+        Default implementation raises NotImplementedError.
+        """
+        raise NotImplementedError(f"Signing is not implemented for {self.name}")

@@ -52,5 +52,5 @@ def test_claims_validator_custom_validator():
     
     # Invalid
     from src.async_jwt_core.exceptions import ValidationError
-    with pytest.raises(ValidationError, match="Custom validator 'is_admin' failed"):
+    with pytest.raises(ValidationError, match="Custom validation failed for claim: is_admin"):
         validator.validate({"role": "user"})
