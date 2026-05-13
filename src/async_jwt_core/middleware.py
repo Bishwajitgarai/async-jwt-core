@@ -53,15 +53,8 @@ class FlaskMiddleware:
         def before_request():
             try:
                 token = Validator.extract_token(request)
-                
-                # Run async validation in a safe way
-                try:
-                    loop = asyncio.get_running_loop()
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    
-                claims = loop.run_until_complete(self.validator.validate(token, self.jwks))
+                # Run async validation
+                claims = asyncio.run(self.validator.validate(token, self.jwks))
                 # Attach to Flask global 'g'
                 g.user_claims = claims
             except ValidationError as e:
@@ -86,12 +79,6 @@ class DjangoMiddleware:
         try:
             token = Validator.extract_token(request)
             
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                
             # Try to get JWKS from Django settings
             jwks = {"keys": []}
             try:
@@ -100,7 +87,8 @@ class DjangoMiddleware:
             except:
                 pass
                 
-            claims = loop.run_until_complete(self.validator.validate(token, jwks))
+            # Run async validation
+            claims = asyncio.run(self.validator.validate(token, jwks))
             # Attach to request object
             request.user_claims = claims
         except ValidationError as e:

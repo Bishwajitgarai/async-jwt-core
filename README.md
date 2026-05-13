@@ -5,9 +5,6 @@ A minimal, spec-first, framework-agnostic, async-only JWT validator with zero ne
 [![PyPI version](https://img.shields.io/pypi/v/async-jwt-core.svg)](https://pypi.org/project/async-jwt-core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- **PyPI**: https://pypi.org/project/async-jwt-core/
-- **GitHub**: https://github.com/Bishwajitgarai/async-jwt-core
-
 ---
 
 ## 🚀 Why `async-jwt-core`? (The Problem We Solve)
@@ -100,6 +97,21 @@ Here is a comparison of why `async-jwt-core` is the ultimate choice for modern P
 
 ---
 
+## ✨ Key Features
+
+-   🔒 **Zero Network I/O** – Keys are fetched externally.
+-   ⚡ **Async-Only API** – Designed from the ground up for `asyncio`.
+-   🧩 **Framework Agnostic** – Works with FastAPI, Sanic, aiohttp, Flask, or Django.
+-   🎯 **Custom Claim Validation** – Pass your own validation functions.
+-   📦 **Ultra Lightweight** – Only depends on `cryptography`.
+
+## 🔐 Supported Algorithms
+
+We support a vast range of modern cryptographic algorithms out of the box (**13 total**):
+`HS256`, `HS384`, `HS512`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`, `ES256`, `ES384`, `ES512`, `EdDSA`.
+
+---
+
 ## 🔬 How to Test Your Application
 
 Testing an application that uses `async-jwt-core` is easy. You can mock the `Validator` or create valid tokens for testing using `Encoder`.
@@ -135,19 +147,6 @@ async def test_protected_route():
 
 ---
 
-## ✨ Key Features
-
--   🔒 **Zero Network I/O** – Keys are fetched externally.
--   ⚡ **Async-Only API** – Designed from the ground up for `asyncio`.
--   🧩 **Framework Agnostic** – Works with FastAPI, Sanic, aiohttp, Flask, or Django.
--   🎯 **Custom Claim Validation** – Pass your own validation functions.
--   📦 **Ultra Lightweight** – Only depends on `cryptography`.
-
-## 🔐 Supported Algorithms
-
-We support a vast range of modern cryptographic algorithms out of the box (**13 total**):
-`HS256`, `HS384`, `HS512`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`, `ES256`, `ES384`, `ES512`, `EdDSA`.
-
 ## 📖 Examples (References for Users)
 
 We provide full working examples in the GitHub repository:
@@ -157,11 +156,30 @@ We provide full working examples in the GitHub repository:
 -   🌶️ **[Flask Demo](https://github.com/Bishwajitgarai/async-jwt-core/blob/main/examples/flask_demo.py)**: Shows how to use it in Flask.
 -   🎸 **[Django Demo](https://github.com/Bishwajitgarai/async-jwt-core/blob/main/examples/django_demo.py)**: Shows how to use it in Django.
 
+---
+
 ## 🛠️ Installation
 
 ```bash
 uv add async-jwt-core
 ```
+
+---
+
+## 🔗 Project Links & Resources
+
+-   📦 **PyPI**: [https://pypi.org/project/async-jwt-core/](https://pypi.org/project/async-jwt-core/)
+-   🐙 **GitHub**: [https://github.com/Bishwajitgarai/async-jwt-core](https://github.com/Bishwajitgarai/async-jwt-core)
+
+## 🤝 Contributing
+
+We welcome contributions! This is an open-source project designed to make async JWT validation better for everyone. If you have ideas for new features, bug fixes, or improvements, feel free to open an issue or submit a pull request on GitHub!
+
+## 👤 Author
+
+Developed and maintained by **[Bishwajit Garai](https://github.com/Bishwajitgarai)**.
+
+---
 
 ## 📄 License
 
