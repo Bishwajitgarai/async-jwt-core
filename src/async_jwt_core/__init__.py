@@ -1,5 +1,5 @@
-from .validator import Validator
-from .claims import JWTClaims
+from .core.validator import Validator
+from .claims.model import JWTClaims
 from .exceptions import (
     ValidationError,
     ExpiredTokenError,
@@ -8,7 +8,7 @@ from .exceptions import (
     InvalidAudienceError,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"  # Bump version as requested for a bigger architecture
 
 __all__ = [
     "Validator",
