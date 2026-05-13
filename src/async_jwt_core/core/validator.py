@@ -32,10 +32,7 @@ class Validator:
         rate_limit_rps: Optional[float] = None,
         rate_limit_burst: Optional[float] = None
     ):
-        # Load from ENV defaults if not provided
         self.algorithms = algorithms or os.getenv("JWT_ALGORITHMS", "RS256").split(",")
-        
-        # Strip whitespace from algorithms list
         self.algorithms = [alg.strip() for alg in self.algorithms]
         
         resolved_issuer = issuer or os.getenv("JWT_ISSUER")
@@ -54,7 +51,6 @@ class Validator:
         self.nonce_checker = nonce_checker
         self.expected_typ = expected_typ
 
-        # Initialize Rate Limiter if requested
         self.rate_limiter = None
         if rate_limit_rps:
             burst = rate_limit_burst or rate_limit_rps * 2
@@ -63,8 +59,6 @@ class Validator:
 
     async def validate(self, token: str, jwks: Dict[str, Any]) -> JWTClaims:
         """Validate a JWT token against a JWKS."""
-        
-        # 0. Check Rate Limit
         if self.rate_limiter:
             if not await self.rate_limiter.acquire():
                 raise ValidationError("Rate limit exceeded for token validation")
@@ -77,11 +71,9 @@ class Validator:
 
             header_b64, payload_b64, signature_b64 = parts
 
-            # 1. Decode header and payload
             header = await self.get_unverified_header(token)
             payload = await self.decode_unverified(token)
 
-            # 2. Check algorithm and type
             alg_name = header.get("alg")
             if not alg_name:
                 raise ValidationError("Token header missing 'alg'")
@@ -93,11 +85,9 @@ class Validator:
                 if typ != self.expected_typ:
                     raise ValidationError(f"Invalid token type: expected {self.expected_typ}, got {typ}")
 
-            # Critical Header Check
             if "crit" in header:
                 raise ValidationError("Critical headers ('crit') are not supported yet")
 
-            # 3. Find key in JWKS
             kid = header.get("kid")
             if not kid:
                 raise ValidationError("Token header missing 'kid'")
@@ -107,7 +97,6 @@ class Validator:
             if not jwk:
                 raise ValidationError(f"Key with kid '{kid}' not found in JWKS")
 
-            # Security Check: Verify key type matches algorithm
             kty = jwk.get("kty")
             if alg_name.startswith("RS") or alg_name.startswith("PS"):
                 if kty != "RSA":
@@ -119,47 +108,34 @@ class Validator:
                 if kty != "EC":
                     raise ValidationError(f"Key type mismatch: algorithm {alg_name} requires kty='EC'")
 
-            # 4. Verify signature
             message = f"{header_b64}.{payload_b64}".encode("utf-8")
             try:
                 signature = base64url_decode(signature_b64)
             except Exception as e:
                 raise ValidationError(f"Failed to decode signature: {e}") from e
 
-            # Get algorithm implementation
             algorithm = get_algorithm(alg_name)
-            
-            logger.debug(f"Verifying signature with {alg_name}")
             algorithm.verify(message, signature, jwk)
-            logger.debug("Signature verified successfully")
 
-            # 5. Verify claims
             self.claims_validator.validate(payload)
 
-            # 6. Nonce / Replay Detection
             if self.nonce_checker and "jti" in payload:
                 jti = payload["jti"]
-                logger.debug(f"Checking nonce (jti): {jti}")
                 is_valid = await self.nonce_checker(jti)
                 if not is_valid:
                     raise ValidationError(f"Nonce (jti) '{jti}' is invalid or replayed")
 
-            logger.debug("Token validation successful")
             return JWTClaims.from_dict(payload)
 
-        except ValidationError as e:
-            logger.warning(f"Validation failed: {e}")
+        except ValidationError:
             raise
         except Exception as e:
-            logger.error(f"Unexpected error during validation: {e}")
             raise ValidationError(f"Unexpected error during validation: {e}") from e
 
     async def decode_unverified(self, token: str) -> Dict[str, Any]:
         """Decode the payload without verification."""
         try:
             parts = token.split(".")
-            if len(parts) != 3:
-                raise ValidationError("Invalid token format")
             payload_b64 = parts[1]
             return decode_json(base64url_decode(payload_b64))
         except Exception as e:
@@ -169,15 +145,11 @@ class Validator:
         """Decode the header without verification."""
         try:
             parts = token.split(".")
-            if len(parts) != 3:
-                raise ValidationError("Invalid token format")
             header_b64 = parts[0]
             return decode_json(base64url_decode(header_b64))
         except Exception as e:
             raise ValidationError(f"Failed to decode unverified header: {e}") from e
 
-    # --- Helper Methods for Header Extraction ---
-    
     async def get_kid(self, token: str) -> Optional[str]:
         """Get 'kid' from header without verification."""
         header = await self.get_unverified_header(token)
@@ -188,16 +160,6 @@ class Validator:
         header = await self.get_unverified_header(token)
         return header.get("alg")
 
-    async def get_jku(self, token: str) -> Optional[str]:
-        """Get 'jku' (JWK Set URL) from header."""
-        header = await self.get_unverified_header(token)
-        return header.get("jku")
-
-    async def get_x5c(self, token: str) -> Optional[list]:
-        """Get 'x5c' (X.509 Certificate Chain) from header."""
-        header = await self.get_unverified_header(token)
-        return header.get("x5c")
-
     def _find_key(self, jwks: Dict[str, Any], kid: str) -> Optional[Dict[str, Any]]:
         """Find the key with the given kid in the JWKS."""
         keys = jwks.get("keys", [])
@@ -205,6 +167,38 @@ class Validator:
             if key.get("kid") == kid:
                 return key
         return None
+
+    @staticmethod
+    def extract_token(request: Any) -> str:
+        """Extract JWT token from a request object or headers dict.
+        
+        Supports dicts or objects with a .headers attribute (FastAPI, Starlette, etc.).
+        Expects 'Bearer <token>' in Authorization header.
+        """
+        headers = None
+        if isinstance(request, dict):
+            headers = request
+        elif hasattr(request, "headers"):
+            headers = request.headers
+            
+        if not headers:
+            raise ValidationError("Could not find headers in request object")
+            
+        # Try to find authorization header (case-insensitive)
+        auth_header = None
+        for k, v in headers.items():
+            if k.lower() == "authorization":
+                auth_header = v
+                break
+                
+        if not auth_header:
+            raise ValidationError("Authorization header missing")
+            
+        parts = auth_header.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            raise ValidationError("Invalid Authorization header format: must be 'Bearer <token>'")
+            
+        return parts[1]
 
     @staticmethod
     async def parse_introspection_response(response: Dict[str, Any]) -> Dict[str, Any]:

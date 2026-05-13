@@ -44,50 +44,34 @@ We support a vast range of modern cryptographic algorithms out of the box (12 to
 
 To make your life easier, we include features that other libraries charge you in complexity:
 
-### 1. In-built Async Rate Limiter
-Protect your validation endpoint from brute-force or DoS attacks with an in-memory Token Bucket rate limiter.
+### 1. Token Extraction from Requests
+Extract the JWT token directly from a request object (like FastAPI, Starlette, Flask, or Django Request) or a dictionary of headers.
 ```python
-validator = Validator(algorithms=["RS256"], rate_limit_rps=10.0, rate_limit_burst=20.0)
+token = Validator.extract_token(request)
 ```
 
-### 2. Auto Environment Variable Defaults
-We automatically load critical defaults from environment variables if not specified in code:
--   `JWT_ALGORITHMS` (Comma separated)
--   `JWT_ISSUER`
--   `JWT_AUDIENCE`
+### 2. In-built Async Rate Limiter
+Protect your validation endpoint from brute-force or DoS attacks with an in-memory Token Bucket rate limiter.
 
-### 3. JSON Web Encryption (JWE) Support
-We don't just do signing. We now support **JWE decryption** (RSA-OAEP with AES-GCM). This allows you to handle encrypted tokens where the payload is hidden.
+### 3. Auto Environment Variable Defaults
+We automatically load critical defaults from environment variables if not specified in code (e.g., `JWT_ALGORITHMS`, `JWT_ISSUER`).
 
-### 4. Nonce / Replay Detection
-Prevent replay attacks by checking the `jti` (JWT ID) claim. Pass an async callback to check uniqueness against your database or Redis.
+### 4. JSON Web Encryption (JWE) Support
+We support **JWE decryption** (RSA-OAEP with AES-GCM) to handle encrypted tokens.
 
-### 5. Token Introspection (RFC 7662)
-Validate opaque tokens by parsing responses from an introspection endpoint.
+### 5. Nonce / Replay Detection
+Prevent replay attacks by checking the `jti` (JWT ID) claim via an async callback.
 
-### 6. Multiple Issuers & Audiences
-Support passing a list of allowed issuers and audiences for multi-tenant applications.
+## 📖 Examples (References for Users)
 
-### 7. Custom Clock for Testing
-Pass a custom function to get the current time, making it easy to test expiration logic.
+We provide full working examples in the `examples/` directory of the repository:
 
-### 8. Token Type (`typ`) Validation
-Enforce that the token has a specific type in the header (e.g., `JWT`).
+-   📄 **[Basic Usage](examples/basic_usage.py)**: Shows how to generate keys, create a token, and validate it using RSA.
+-   🚀 **[FastAPI Demo](examples/fastapi_demo.py)**: Shows how to integrate with FastAPI using the `extract_token` helper.
+-   🌶️ **[Flask Demo](examples/flask_demo.py)**: Shows how to use it in Flask 2.0+ async routes.
+-   🎸 **[Django Demo](examples/django_demo.py)**: Shows how to use it in Django 3.1+ async views.
 
-### 9. Strict Key Type Validation (Security)
-We enforce that the JWK's `kty` matches the algorithm used (e.g., `RS256` requires `RSA`), preventing algorithm confusion attacks.
-
-### 10. Token Max Age Check
-Enforce that a token was issued recently based on the `iat` claim, independent of the `exp` claim.
-
-### 11. Subject (`sub`) Matching
-Directly validate that the token belongs to a specific user.
-
-### 12. Header Extraction Helpers
-Extract `kid`, `alg`, `jku`, and `x5c` directly from the token without verification, helping you decide how to process it.
-
-### 13. Built-in Async JWKS Cache
-Even though we don't do I/O, we provide a simple async in-memory cache with TTL so you don't have to write your own.
+Check the folder for more references on how to use the library in real-world scenarios.
 
 ## 🛠️ Installation
 
