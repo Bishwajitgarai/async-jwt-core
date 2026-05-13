@@ -97,6 +97,39 @@ Here is a comparison of why `async-jwt-core` is the ultimate choice for modern P
 
 ---
 
+## 🌍 Environment Variables Configuration
+
+You can configure the default behavior of the `Validator` using environment variables. This is useful for containerized applications and avoiding hardcoded secrets in code.
+
+All variables use the `ASYNC_JWT_` prefix to avoid conflicts:
+
+| Variable | Description | Default | Example |
+| :--- | :--- | :---: | :--- |
+| `ASYNC_JWT_ALGORITHMS` | Comma-separated list of allowed algorithms. | `RS256` | `RS256,HS256` |
+| `ASYNC_JWT_ISSUER` | The expected issuer (`iss`) claim. | `None` | `https://auth.example.com` |
+| `ASYNC_JWT_AUDIENCE` | The expected audience (`aud`) claim. | `None` | `my-api-audience` |
+
+### How to use them:
+
+Just set them in your OS or `.env` file:
+
+```bash
+export ASYNC_JWT_ALGORITHMS="RS256,HS256"
+export ASYNC_JWT_ISSUER="https://auth.yourdomain.com"
+export ASYNC_JWT_AUDIENCE="your-app-audience"
+```
+
+And initialize the validator without arguments:
+
+```python
+from async_jwt_core import Validator
+
+# Automatically picks up values from the environment variables!
+validator = Validator()
+```
+
+---
+
 ## ✨ Key Features
 
 -   🔒 **Zero Network I/O** – Keys are fetched externally.
